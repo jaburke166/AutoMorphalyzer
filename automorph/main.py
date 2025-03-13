@@ -35,6 +35,13 @@ def run(args):
     else:
         print(f'Cannot find any supported files in {AUTOMORPH_DATA}. Please check directory. Exiting analysis')
         return
+    
+    # Checking for model weights and downloading if so
+    print('\nChecking for model weights, this may take a few minutes if model weights are not already downloaded...')
+    utils.check_unpack_model_weights('binary', SCRIPT_PATH)
+    utils.check_unpack_model_weights('artery_vein', SCRIPT_PATH)
+    utils.check_unpack_model_weights('optic_disc', SCRIPT_PATH)
+    print('Model weights ready to go!')
 
     # Creating directory of pre-processed images
     save_path = f'{AUTOMORPH_RESULTS}/M0/images/'

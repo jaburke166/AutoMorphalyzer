@@ -17,16 +17,80 @@ from pathlib import Path
 from skimage import measure, morphology
 import pandas as pd
 import matplotlib.pyplot as plt
+import zipfile
+import requests
 
 from segment.binary.model import Segmenter
 from segment.artery_vein.model import Generator_main, Generator_branch
 from segment.optic_disc.models import get_model
 
 
+
+def _download_zipfile(url, filepath):
+    
+    # Streaming, so we can iterate over the response.
+    response = requests.get(url, stream=True)
+
+    # Sizes in bytes.
+    total_size = int(response.headers.get("content-length", 0))
+    block_size = 1024
+
+    with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
+        with open(filepath, "wb") as file:
+            for data in response.iter_content(block_size):
+                progress_bar.update(len(data))
+                file.write(data)
+
+    if total_size != 0 and progress_bar.n != total_size:
+        raise RuntimeError("Could not download file")
+
+
+
+def check_unpack_model_weights(model_type, save_path):
+
+    if model_type == 'binary':
+        N_model = 10
+        zip_url = 'https://github.com/jaburke166/AutoMorphalyzer/releases/download/v1.0/binary_model_weights.zip'
+    elif model_type == 'artery_vein':
+        N_model = 24
+        zip_url = 'https://github.com/jaburke166/AutoMorphalyzer/releases/download/v1.0/arteryvein_model_weights.zip'
+    elif model_type == 'optic_disc':
+        N_model = 8
+        zip_url = 'https://github.com/jaburke166/AutoMorphalyzer/releases/download/v1.0/opticdisc_model_weights.zip'
+
+    # Destination for zip and model weights
+    destination_folder = os.path.join(save_path, 'segment', model_type)   
+    zip_fname = os.path.split(zip_url)[1]
+    zip_path = os.path.join(destination_folder, zip_fname)
+
+    # Check for model weights
+    weight_list = list(Path(os.path.join(destination_folder, 'model_weights')).glob('*.pth'))
+    if len(weight_list) != N_model:
+        print(f"Downloading {zip_url} to {destination_folder}")
+
+        # Download the zip file
+        _download_zipfile(zip_url, zip_path)
+
+        # Extract the zip file
+        os.makedirs(destination_folder, exist_ok=True)
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            for member in tqdm(zip_ref.infolist(), desc='Extracting ', total=N_model, leave=False, unit='model'):
+                 zip_ref.extract(member, destination_folder)
+
+        # Remove downloaded .zip file
+        os.remove(zip_path)
+
+    else:
+        print(f'{model_type.capitalize()} model weights already downloaded!')
+
+
+
 def resolve_device():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = 'mps' if torch.backends.mps.is_available() else 'cpu'
     return device
+
+
 
 def get_binary_models():
     MODEL_PATH = os.path.join(SEGMENTATION_WEIGHT_PATH,
@@ -43,6 +107,7 @@ def get_binary_models():
         networks.append(model)
 
     return networks
+
 
 
 def get_av_models():
@@ -72,6 +137,7 @@ def get_av_models():
     return av_networks
 
 
+
 def get_od_models():
     MODEL_PATH = os.path.join(SEGMENTATION_WEIGHT_PATH,
                               'optic_disc', 
@@ -89,6 +155,8 @@ def get_od_models():
 
     return od_networks
  
+
+
 def post_process_segs(preds, height, width, mode='binary'):
 
     n_img = preds.shape[0]
