@@ -2,7 +2,7 @@
 # MAKE SURE NAMES AND INPUTS ARE SEPARATED WITH ": " [colon-spacebar]
 
 # This is the folder which .vol files will be read from and analysed
-input_directory: /Users/s1522100/Documents/Post-Doc/AutoMorph/input
+input_directory: /Users/s1522100/Documents/Post-Doc/AutoMorphalyzer/test_images
 
 # This is the folder which will save all results into
-output_directory: /Users/s1522100/Documents/Post-Doc/AutoMorph/output_test_mac
+output_directory: /Users/s1522100/Documents/Post-Doc/AutoMorphalyzer/test_output

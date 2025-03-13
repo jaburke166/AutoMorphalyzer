@@ -353,6 +353,7 @@ def nested_dict_to_df(values_dict):
     return df
 
 
+
 def select_largest_mask(binmask):
     """
     Retain only the largest connected region in a binary mask.
