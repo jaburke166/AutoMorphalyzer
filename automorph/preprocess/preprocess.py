@@ -11,6 +11,8 @@ sys.path.append(PACKAGE_PATH)
 import torch
 import pandas as pd
 import timm
+import cv2
+import numpy as np
 from tqdm import tqdm
 from PIL import Image
 from torchvision.transforms import functional as F
@@ -79,10 +81,19 @@ def preprocess_dataset(input_path, image_list, save_path):
                     quality.append(crop_row.quality.iloc[0])
                 continue
                 
+            # Load in image and crop to square
             img = prep.imread(dst_image)
             r_img, borders, mask, r_img, radius_list, centre_list_w, centre_list_h = prep.process_without_gb(img,img,radius_list,centre_list_w, centre_list_h)
-            q = get_quality(img, model_wb)
+            
+            # We resize to 912,912 to facilitate feature measurement and manual annotation
+            imsize = (912,912)
+            r_img = cv2.resize(np.float32(r_img), imsize, interpolation = cv2.INTER_NEAREST).astype(np.uint8)
+
+            # Quality from QuickQual
+            q = get_quality(r_img, model_wb)
             quality.append(q)
+
+            # Write out image
             prep.imwrite(os.path.join(save_path, 'M0', 'images', image_path.split('.')[0] + '.png'), r_img)
             name_list.append(image_path.split('.')[0] + '.png')
         except Exception as e:

@@ -1,84 +1,108 @@
-# AutoMorph 2022 👀
---Code for [AutoMorph: Automated Retinal Vascular Morphology Quantification via a Deep Learning Pipeline](https://tvst.arvojournals.org/article.aspx?articleid=2783477).
+# AutoMorphalyzer 2025 👀
 
-Please contact 	**ykzhoua@gmail.com** or **yukun.zhou.19@ucl.ac.uk** if you have questions.
+This codebase is a significantly adapted version from the original codebase found [here](https://rmaphoh.github.io/projects/automorph.html). The original codebase was written as part of the publication [AutoMorph: Automated Retinal Vascular Morphology Quantification via a Deep Learning Pipeline](https://tvst.arvojournals.org/article.aspx?articleid=2783477).
 
-![badge-logo](https://img.shields.io/badge/CMIC-2022-orange.svg?style=flat-square&logo=data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEARwBHAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAcABwDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9KfH3xK8N/DHRzqfiTVodNtzny0c5lmYfwxoPmY/QfXFfInxW/ax+JfjHw7qur/DTSf8AhHdC0tRONU1GNHkuiHA2YbKYOcFVyfVhXU/tdafbar8cvhRaXlvHc2s3mpLDKuVdfMTII7jjpXS/E7Q9MHwR1qMqjXt3amG0tBhc4kX5Y0HsDXqKNLD0Y1JR5pS77LW2x81Uq4nGYqWHpy5Ywte272e/z6HE/Af/AIKMeHfFdzD4f+JlongbxHkRi+Yn+zp26ZLHmEn/AGsr/t19i29zFdwRzwTLNDKodJI2DK6nkEEcEEd6/F74uaRb22hX+6ENJCqshkX54yWAIB6iv1W/ZjGP2c/hmAMAeHbHgf8AXFa5KkYuKnHQ9XD1anO6VR3t1PM/2wPhX498S6p4X8ZeA7O11W/8PLIX0+Rv3z5ZWDRqcK+MH5cg9MZ6V8t6P8dxc3d3B4gmn0fWbcstza6sGBRh1AyAQR/dIB9jX6gEda84+KP7PPgD4x3VrceKfD8N7eWzKy3kTNDOyg/6tpEIZkPTaSfbFaQrxlFU6qultY562ClGpKvh5Wk977PofnHceGvEX7UWo3Gh+CvDs2ogsqXWu3H7mGEA5+ZzwBx0OWPZa/TX4S+C7n4efC7wn4XurmK6utH0u3sZZ4QQkjRxhSyg84JHGa3PDfhrSvCej22laLp1tpWm267YrW0iEcaD2A/n1NalZVaqmlGKskdOGwzo3nOV5M//2Q==)  ![badge-logo](https://img.shields.io/badge/Moorfields-2022-blue.svg?style=flat-square&logo=data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAaABsDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9M/G/jC08E6G+o3au43rFHGmN0jt0UbiBk4OASNxwo+YgH528UfGrWJHmW+8Sf2RKYXlGn6TC9zcIogLnKIodW2zeYgk2F1SM4VlcV6B8cHkk8U+Go3jLW6LI6EJI26Q9EGyMFixVAIvOXzM7dpyDXnfwU8M23i69it9S1K8064lsItSmW3nkt7i6uGmcsGZ5HkKwMTGsZciPe6HJPy/R4OjSp0PbVFf+vn27Hz2Lq1atb2NN2/r5fmdT4V+N+o2VwJr3ULXXtFe5lhkurfObci4kjKgEK7YZZEHynf5USIGeRivvtrdxXltHPC4kikUMrLyCK+Pruwh03xs1rDcG9t7qS90uS7ZXY30EFoJIHf8A0crO8Su6IXl2tvZmYsSB7h8LvEF6/gHR/JxdQiNlSWOBipUOwAXYVUAAYAVQAAAAKzx2FgoqpTVr/wDB/wAv+AaYLEyu6dR3t/wP8zX+Lnga58U6da32lDZrWnsXgkjVPNZepRGbHJIXALKhOC4dQVPzRPodra+ZBGbDTdOUmaXRb6zmEVojvHHILV4BG8S/Z55HSIjc0lyHbazfL9rt2+tYHiTQ9Nv4fNutPtbmX5RvmhV2xuBxkj1VT+A9KywOLlT/AHXQ0x2EjP8Ae9T5d8LeEdQ1fVZLe1K6jrc0f2G7udOtza21jEzb5fIUMu6N54pJCZgG8xZFEiNLG5+qvD2gR6HolnYFhcNBGFaaUFmdupYk5JySTkkn1JPNTaJp9rYaZbLbW0NurRqSIowoJ2gdvYAfgK0R0Fc+MxUq8uXZI6MHho0Y827Z/9k=)
+This adaptation was motivated by the need for a faster, more accessible, user-friendly and correct version of AutoMorph at the University of Edinburgh. We hope this may also prove useful to other research institutes.
 
+Please contact **Jamie.Burke@ed.ac.uk** if you have questions.
 
-Project website: https://rmaphoh.github.io/projects/automorph.html
+**Note**: This is still in development, and further tests are required to compare the output from AutoMorph and AutoMorphalyzer.
 
-Talks on NIHR Moorfields BRC: https://moorfieldsbrc.nihr.ac.uk/case-study/research-report/
+---
 
+## Major changes from [Automorph](https://github.com/rmaphoh/AutoMorph) in AutoMorphalyzer
 
+* Code is restructured to run from a simple python script `automorph/main.py` directly on Anaconda Prompt after local installation.
 
-## News 👀
-2024-06-27 update: pytorch 2.3 & python 3.11 supported; Mac M2 GPU supported; CPU supported (thanks to [staskh](https://github.com/staskh))
+* The end-user is only required to specify file paths in `config.txt`, requiring two inputs: the path to the data (`input_directory`) and where to save the results (`output_directory`). Upon running `python automorph/main.py' while inside the AutoMorphalyzer folder using Anaconda Prompt will trigger the pipeline to run.
 
-2023-08-24 update: Added feature measurement for disc-centred images; removed unused files.
-&nbsp;
+* Model weights are packaged as a GitHub release and automatically downloaded upon first running locally. This will not need to be done again.
 
+* CFP images are currently not rejected based on quality (the original M1 module has been removed), and instead are always fed through the pipeline. 
 
+* Quality is now computed as a probability of rejection from (QuickQual)[https://github.com/justinengelmann/QuickQual] and saved out in the final results file collating all features.
 
+* At the pre-processing stage, images are downsized to (912,912) as that is the largest dimension used for segmentation and feature measurement. This also help facilitate manual annotation of segmentations using ITK-Snap
 
-## Pixel resolution
+* For all modules (pre-processing, segmentation, feature measurement) if an image has previously been analysed, it is skipped to save time. This is based on:
+  - Pre-processing: the presence of the image file path in `{output_directory}\M0\crop_csv.csv`.
+  - segmentation: the presence of the segmentation mask in each of the `{output_directory}\M2\{model_type}\raw_binary` for model_type in `binary`, `artery_vein` and `optic_disc`.
+  - feature measurement: if `feature_measurements.csv` exists in `{output_directory}\M3` and the presence of the image file path in the csv file.
 
-The units for vessel average width, disc/cup height and width, and calibre metrics are defined as microns. For it, we need to organise a [resolution_information.csv](https://github.com/rmaphoh/AutoMorph/blob/main/resolution_information.csv) which includes the pixel resolution information, which can be queried in FDA or Dicom files. Alternatively, approximate value can be used, e.g., 0.008 for Topcon 3D-OCT.
+* Segmentation is still performed using the original models from the AutoMorph codebase. That is, 
+  - Vessel segmentation (Binary & Artery-Vein): [BF-Net](https://github.com/rmaphoh/Learning-AVSegmentation.git)
+  - Optic disc segmentation: [lwnet](https://github.com/agaldran/lwnet.git)
 
-**If you don't use these features or care their units**, you can put all images in the folder ./images and run
+* The feature measurement module has had a major revamp to remove redunancy, improve processing time. Comparisons and execution times to be published soon on this repository.
+  - Fractal dimension, vessel density and global vessel calibre remain the same. These are only provided across the whole image, and **not** across zones B and C.
+  - Tortuosity (distance and density) and local calibre are corrected from the original codebase. These are provided across all zones.
+    - Extracting individual vessel segments has been sped up significantly through use of Numba and a Depth-first search algorithm.
+    - Tortuosity is calculated across individual vessel segments, and the original codebase extracted some vessels segments incorrectly, leading to exaggerated values in tortuosity. This has been corrected.
+    - Local calibre was originally measured inefficiently per vessel segment.  
+  - Tortuosity squared curvature has been removed due to redundancy with other tortuosity measures. 
+  - We only measure CRAE and CRVE using the Knudtson formula, and remove the Hubbard formula. These are only measured in zones B and C.
+  - We include arteriovenous ratio (AVR) in zones B and C.
+  
+*  If an error is encountered during pre-processing or feature measurement, the file is skipped and a full traceback is both printed out in the terminal and also written to a .txt log file which is saved in `{output_directory}\M3`. If failure occurs at feature measurement, relevant metrics will be saved as -1s in the output .csv file.
 
-```bash
-python generate_resolution.py
+* Extensive use of the `os` package throughout the codebase ensures that this pipeline will work across different OS systems. It has currently been tested on Windows and MacOS (so is likely to also work in Linux).
+
+* Composite segmentation visualisations of the binary vessels, arteries, veins and optic disc/cup are saved out per file for easy look-up. This can be found in `{output_directory}\M3\segmentations`.
+
+* AutoMorphalyzer infers laterality based on vessel density either side of the lateral position of the optic cup.
+
+* The only images saved out currently are composite segmentations (as above) and raw binary segmentations of the binary vessels, artery-veins and optic disc/cup. These are saved at the same dimension as for feature measurement `(912,912)`. Thus, we do not save out uncertainty maps (from the ensemble models), or segmentation masks for different zones or at different dimensions.
+
+* Currently we assume no knowledge of pixel resolution, so metrics global/local vessel calibre, disc/cup height and width are left in pixel units. Both the original and new codebases measure metrics using a universal dimension of `(912,912)` so these features are still comparable across populations analysed using these codebases.
+
+* This pipeline also allows manual editing of binary vessel, artery-vein and optic disc-cup segmentations using ITK-Snap and fed back into pipeline to recompute feature measuremements.
+
+---
+
+## Getting started
+
+To get a local copy up, follow the steps in `quick_start.txt`, or follow the instructions below.
+
+1. You will need a local installation of Python to run AutoMorphalyzer. We recommend a lightweight package management system such as Miniconda. Follow the instructions [here](https://docs.anaconda.com/free/miniconda/miniconda-install/) to download Miniconda for your desired operating system.
+
+2. After downloading, navigate and open the Anaconda Prompt and clone the AutoMorphalyzer repository.
+
 ```
-&nbsp;
+git clone https://github.com/jaburke166/AutoMorphalyzer.git
+```
+
+3. Create environment and install dependencies to create your own environment in Miniconda.
+
+```
+conda create -n automorph-env python=3.11 -y
+conda activate automorph-env
+pip install -r requirements.txt
+```
+
+Done! You have successfully set up the software to analyse colour fundus photography data!
+
+See below for how to run AutoMorphalyzer on your own data.
+
+---
+
+## Running AutoMorphalyzer
 
 
-## Running AutoMorph
-### Running with Colab
+**note**: While we endeavoured to speed up the codebase, we still recommend the use of GPU acceleration for the segmentation module.
 
-Use the Google Colab and a free Tesla T4 gpu [Colab link click](https://colab.research.google.com/drive/13Qh9umwRM1OMRiNLyILbpq3k9h55FjNZ?usp=sharing).
+---
 
+## Contributors and citing
 
-### Running on local/virtual machine
+The contributors to this adapted codebase are:
 
-Install and use on your own machines [LOCAL.md](LOCAL.md).
+* Jamie Burke (Jamie.Burke@ed.ac.uk)
 
+The original author of this codebase is:
 
-### Running with Docker
+* Yukun Zhou (yukun.zhou.19@ucl.ac.uk)
 
-Zero experience in Docker? No worries [DOCKER.md](DOCKER.md).
-
-&nbsp;
-
-## Common questions
-
-### Memory/ram error
-
-We use Tesla T4 (16Gb) and 32vCPUs (120Gb). When you meet memory/ram issue in running, try to decrease batch size:
-
-* ./M1_Retinal_Image_quality_EyePACS/test_outside.sh -b=64 to smaller, e.g., 32 or 16.
-* ./M2_Artery_vein/test_outside.sh --batch-size=8 to smaller
-* ./M2_lwnet_disc_cup/test_outside.sh --batchsize=8 to smaller
-
-
-### Invalid results
-
-In csv files, invalid values (e.g., optic disc segmentation failure) are indicated with -1.  
-
-
-### Components
-
-1. Vessel segmentation [BF-Net](https://github.com/rmaphoh/Learning-AVSegmentation.git)
-
-2. Image pre-processing [EyeQ](https://github.com/HzFu/EyeQ.git) 
-
-3. Optic disc segmentation [lwnet](https://github.com/agaldran/lwnet.git)
-
-4. Feature measurement [retipy](https://github.com/alevalv/retipy.git)
-
-&nbsp;
-
-## Citation
+If you wish to use this toolkit please consider citing the original work using the following BibText, with additional comment on this being an adapted version.
 
 ```
 @article{zhou2022automorph,

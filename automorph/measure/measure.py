@@ -12,6 +12,8 @@ import numpy as np
 import cv2
 import bottleneck as bn
 import utils
+from pathlib import Path
+import numpy as np
 import pandas as pd
 from scipy.spatial import KDTree
 from skimage.draw import polygon
@@ -21,6 +23,11 @@ from tqdm import tqdm
 import get_vessel_coords
 from preprocess import fundus_prep as prep
 
+DISC_COLS = ['laterality', 'macular_centred', 'disc_height', 'disc_width', 'cup_height', 'cup_width', 'CDR_vertical', 'CDR_horizontal']
+
+VESSEL_COLS = ['vessel_density', 'fractal_dimension', 'average_global_calibre', 'average_local_calibre', 'tortuosity_distance', 'tortuosity_density'] 
+LARGE_VESSEL_COLS = ['CRAE_Knudtson_artery_B', 'CRAE_Knudtson_artery_C', 'CRVE_Knudtson_vein_B', 'CRVE_Knudtson_vein_B', 'AVR_B', 'AVR_C']
+ALL_COLS = [f'{f}_{v}_{z}'for z in ['whole', 'B', 'C']  for v in ['binary', 'artery', 'vein'] for f in VESSEL_COLS] + LARGE_VESSEL_COLS
 
 def boxcount(Z, k):
     S = np.add.reduceat(np.add.reduceat(Z,
@@ -417,19 +424,20 @@ def merge_results(all_cfp_dict, all_disc_metrics, output_directory):
     # Add in Arteriovenule ratio
     feature_df['AVR_B'] = feature_df.CRAE_Knudtson_artery_B / feature_df.CRVE_Knudtson_vein_B
     feature_df['AVR_C'] = feature_df.CRAE_Knudtson_artery_C / feature_df.CRVE_Knudtson_vein_C
+    
+    # Set AVRs to 1 where any one of CRAE/CRVE failed
+    feature_df['AVR_B'] = [-1 if avr < 0 else (-1 if avr==-1 else avr) for avr in feature_df['AVR_B']]
+    feature_df['AVR_C'] = [-1 if avr < 0 else (-1 if avr==-1 else avr) for avr in feature_df['AVR_C']]
 
-    # Order columns
-    feature_order = ['vessel_density', 'fractal_dimension', 'average_global_calibre', 'average_local_calibre', 'tortuosity_distance', 'tortuosity_density'] 
-    large_vessel_cols = ['CRAE_Knudtson_artery_B', 'CRAE_Knudtson_artery_C', 'CRVE_Knudtson_vein_B', 'CRVE_Knudtson_vein_B', 'AVR_B', 'AVR_C']
-    col_order = [f'{f}_{v}_{z}'for z in ['whole', 'B', 'C']  for v in ['binary', 'artery', 'vein'] for f in feature_order] + large_vessel_cols
-    col_order = [col for col in col_order if col in feature_df.columns]
+    # Order columns via ALL_COLS (see start of script)
+    col_order = [col for col in ALL_COLS if col in feature_df.columns]
     feature_df = feature_df[['Filename__'] + col_order]
     feature_df = feature_df.rename({'Filename__':'Filename'}, axis=1)
 
-    # Organise disc metrics
+    # Organise disc metrics (see start of script for DISC_COLS)
     disc_df = utils.nested_dict_to_df(all_disc_metrics).reset_index()
     disc_df.rename({'index':'Filename'}, axis=1, inplace=True)
-    disc_df = disc_df[['Filename', 'laterality', 'macular_centred', 'disc_height', 'disc_width', 'cup_height', 'cup_width', 'CDR_vertical', 'CDR_horizontal']]
+    disc_df = disc_df[['Filename']+DISC_COLS]
 
     # Merge with quality
     quickqual_df = pd.read_csv(os.path.join(output_directory, 'M0', 'crop_info.csv'))[['Name', 'quality']]
@@ -443,6 +451,27 @@ def merge_results(all_cfp_dict, all_disc_metrics, output_directory):
 
 
 
+def df_to_dict(img_feat_df):
+
+    vessel_types = ['binary', 'artery', 'vein']
+    zone_types = ['whole', 'B', 'C']
+    img_z_dict = {zone:{} for zone in zone_types}
+    img_all_dict = {zone:img_z_dict for zone in vessel_types}
+    # img_feat_dict = {'whole':{}, ''}
+    for col in img_feat_df.columns:
+        if 'AVR' in col:
+            continue
+        vessel_col = '_'.join(col.split('_')[:2]) if 'calibre' not in col else '_'.join(col.split('_')[:3])
+        value = np.unique(img_feat_df[col])[0]
+        for vtype in vessel_types:
+            if vtype in col:
+                for zone in zone_types:
+                    if zone in col:
+                        img_all_dict[vtype][zone][vessel_col] = value
+
+    return img_all_dict
+
+
 
 def feature_measurement(image_list, output_directory):
 
@@ -450,10 +479,23 @@ def feature_measurement(image_list, output_directory):
     save_path = os.path.join(output_directory, 'M3', 'segmentations')
     image_directory = os.path.join(output_directory, 'M0', 'images')
     segmentation_directory = os.path.join(output_directory, 'M2')
+    annotate_directory = os.path.join(output_directory, 'annotations')
+
+    # Check for manual annotations
+    annot_list = set(Path(annotate_directory).glob('*.nii.gz'))
+    used_list = set(Path(annotate_directory).glob('*used.nii.gz'))
+    annot_list = list(annot_list - used_list)
 
     # Create directory to store superimposed segmentations
     if not os.path.exists(save_path):
         os.makedirs(save_path)
+
+    # Check if feature_measurements exist already and load in if so
+    results_path = os.path.join(output_directory, 'M3', 'feature_measurements.csv')
+    if os.path.exists(results_path):
+        results_df = pd.read_csv(results_path)
+    else:
+        results_df = None
 
     # Loop over images
     all_disc_metrics = {} 
@@ -464,25 +506,61 @@ def feature_measurement(image_list, output_directory):
     for i, img_name in tqdm(enumerate(image_list), total=N, desc='Visualisation and feature measurement', unit='image'):
 
         try:
+            # Extract filename
             fname = os.path.splitext(img_name)[0]
-
-            # Load in image and resize to feature measurement imsize (912,912)
+                    
+            # Load in image (already at (912,912) dimensions)
             cfp_img = prep.imread(os.path.join(image_directory, fname + '.png'))
-            cfp_img = transform.resize(cfp_img, img_size)
 
-            # Load in segmentation masks
-            binmask = prep.imread(os.path.join(segmentation_directory, 'binary_vessel', 'raw_binary', fname + '.png'))[...,0].astype(bool)
-            avmask = prep.imread(os.path.join(segmentation_directory, 'artery_vein', 'raw_binary', fname + '.png')).astype(bool)
-            odmask = prep.imread(os.path.join(segmentation_directory, 'optic_disc', 'raw_binary', fname + '.png')).astype(bool)
-            
+            # Check for any manual annotations and load in, otherwise load in original segmentation masks
+            binmask_path = os.path.join(annotate_directory, f'{fname}_binary_vessel.nii.gz')
+            av_path = os.path.join(annotate_directory, f'{fname}_artery_vein.nii.gz')
+            od_path = os.path.join(annotate_directory, f'{fname}_optic_disc.nii.gz')
+            segmentation_masks = []
+            v_manuals = []
+            manual_annot = False
+            for path, vtype in zip([binmask_path, av_path, od_path], ['binary_vessel', 'artery_vein', 'optic_disc']):
+                if os.path.exists(path):
+                    v_manuals.append(vtype)
+                    manual_annot = True
+                    mask = utils.load_annotation(path, vtype).astype(bool)
+                    if os.path.exists(path.split(".")[0]+"_used.nii.gz"):
+                        os.remove(path.split(".")[0]+"_used.nii.gz")
+                    os.rename(path, path.split(".")[0]+"_used.nii.gz")
+                else:
+                    mask = prep.imread(os.path.join(segmentation_directory, vtype, 'raw_binary', fname + '.png'))[...,0]
+                    mask = utils.load_annotation(mask, vtype).astype(bool)
+                segmentation_masks.append(mask)
+            binmask, avmask, odmask = segmentation_masks
+
+            # Print out to end-user of detection of manual annotation
+            if manual_annot:
+                v_str = ',' .join(v_manuals)
+                print(f'Detected {v_str} manual annotations for {img_name}. Using these for feature measurement.')
+
             # Post-process disc segmentation to obtain radius and centre
             disc_mask = (255*utils.select_largest_mask(np.sum(odmask[...,:2], axis=-1))).astype(np.uint8)
             cup_mask = (255*utils.select_largest_mask(odmask[...,1])).astype(np.uint8)
             od_radius = utils.process_opticdisc(disc_mask)
             od_centre = measure.centroid(disc_mask)[[1,0]]
 
-            # Superimpose segmentations together and save
-            utils.superimpose_segmentations(cfp_img, binmask, avmask, disc_mask, cup_mask, save_path, fname)
+            # Check to see if results exist for this file and skip if so
+            prev_analysed = False
+            if results_df is not None and not manual_annot:
+                if img_name in results_df.Filename.values:
+                    prev_analysed = True
+                    # print(f'{img_name} previously measured. Skipping!')
+                    img_df = results_df[results_df.Filename == img_name]
+                    all_disc_metrics[img_name] = img_df[DISC_COLS].iloc[0].to_dict()
+                    
+                    img_feat_df = img_df[[col for col in ALL_COLS if col in img_df.columns]]
+                    all_cfp_dict[img_name] = df_to_dict(img_feat_df)
+
+                    continue
+
+            # Superimpose segmentations together and save out, only if not previously analysed or manual annotation
+            if not prev_analysed or manual_annot:
+                utils.superimpose_segmentations(cfp_img, binmask, avmask, disc_mask, cup_mask, save_path, fname)
 
             # Create dictionary to store disc metrics for each image
             all_disc_metrics[img_name] = get_disc_metrics(disc_mask, cup_mask, binmask)
@@ -525,14 +603,14 @@ def feature_measurement(image_list, output_directory):
             problem_log.extend(log)
             continue
             
-        # Collect all metrics to save out
-        metric_df = merge_results(all_cfp_dict, all_disc_metrics, output_directory)
+    # Collect all metrics to save out
+    metric_df = merge_results(all_cfp_dict, all_disc_metrics, output_directory)
 
-        # Save out log storing any problems
-        if len(problem_log) > 0:
-            with open(os.path.join(output_directory, 'M3', 'feature_measurement_log.txt'), 'w') as f:
-                for item in problem_log:
-                    f.write("%s\n" % item)
+    # Save out log storing any problems
+    if len(problem_log) > 0:
+        with open(os.path.join(output_directory, 'M3', 'feature_measurement_log.txt'), 'w') as f:
+            for item in problem_log:
+                f.write("%s\n" % item)
 
-        # Save out dataframe
-        metric_df.to_csv(os.path.join(output_directory, 'M3', 'feature_measurements.csv'), index=False)
+    # Save out dataframe
+    metric_df.to_csv(os.path.join(output_directory, 'M3', 'feature_measurements.csv'), index=False)

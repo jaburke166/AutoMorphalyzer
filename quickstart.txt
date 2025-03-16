@@ -1,0 +1,16 @@
+QuickStart instructions for AutoMorphalyzer
+
+1. Install miniconda (https://docs.anaconda.com/miniconda/miniconda-install/)
+
+2. Open anaconda prompt and clone this repository via 'git clone https://github.com/jaburke166/AutoMorphalyzer.git' 
+
+3.  Install dependencies by executing (line by line)
+    conda create -n automorph-env python=3.11 -y
+	conda activate automorph-env
+	pip install -r requirements.txt
+
+4. Specify input_directory and output_directory in path\to\AutoMorphalyzer\config.txt
+
+5. In anaconda prompt, navigate to path\to\AutoMorphalyzer and execute
+    	python automorph\main.py
+

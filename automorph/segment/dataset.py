@@ -1,17 +1,11 @@
 import os
 import numpy as np
-from glob import glob
 from pathlib import Path
 import torch
 from torch.utils.data import Dataset
 import logging
 from PIL import Image
-from torchvision import utils
 import random
-from torchvision.utils import save_image
-from scipy.ndimage import rotate
-from PIL import Image, ImageEnhance
-from torchvision.transforms import functional as F
 from automorph.segment.optic_disc import paired_transforms_tv04 as p_tr
 
 
@@ -53,7 +47,7 @@ class AutomorphDataset(Dataset):
         if self.model == 'binary':
             img_array=(img_array-mean)/std
         elif self.model == 'artery_vein':
-            img_array=(img_array-1.0*mean)/1.0*std # Incorrect standardisaton
+            img_array=(img_array-1.0*mean)/1.0*std # Incorrect standardisaton but kept for compatibility with model
         elif self.model == 'optic_disc':
             rsz = p_tr.Resize(self.img_size)
             tnsr = p_tr.ToTensor()
@@ -75,7 +69,10 @@ class AutomorphDataset(Dataset):
         img_file = os.path.join(self.imgs_dir,img_name+'.png')
         img = Image.open(img_file)
         ori_width, ori_height = img.size
-        if self.model in ['binary', 'artery_vein']:
+
+        # Only resizing when artery_vein as pre-processed image is already (912,912) 
+        # and optic disc is already resized in self.preprocess
+        if self.model == 'artery_vein':
             img = img.resize(self.img_size)
         img = self.preprocess(img)
         

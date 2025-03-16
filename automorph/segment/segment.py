@@ -46,7 +46,7 @@ def binary_vessel_segmentation(bin_networks, AUTOMORPH_RESULTS):
     all_img_names = []
     N_bin_nets = len(bin_networks)
     device = utils.resolve_device()
-    for batch in tqdm(loader, total=n_val, desc='Segmenting binary vessels...', unit='batch', leave=True):
+    for batch in tqdm(loader, total=n_val, desc='Segmenting binary vessels', unit='batch', leave=True):
         
         # Unpack batch 
         binary_imgs = batch['image'].to(device=device, dtype=torch.float32)
@@ -84,8 +84,8 @@ def binary_vessel_segmentation(bin_networks, AUTOMORPH_RESULTS):
 
     # Save out
     N_imgs = all_img_names.shape[0]
-    for name, img in tqdm(zip(all_img_names, all_bin_preds), total=N_imgs, desc='Saving binary segmentations...', leave=False):
-        prep.imwrite(os.path.join(results_dir, name + '.png'), 255*img)
+    for name, img in tqdm(zip(all_img_names, all_bin_preds), total=N_imgs, desc='Saving binary segmentations', leave=False):
+        prep.imwrite(os.path.join(results_dir, name + '.png'), (255*img).astype(np.uint8))
 
 
 def arteryvein_vessel_segmentation(av_networks, AUTOMORPH_RESULTS):
@@ -114,7 +114,7 @@ def arteryvein_vessel_segmentation(av_networks, AUTOMORPH_RESULTS):
     N_av_nets = 8
     n_val = len(loader)
     device = utils.resolve_device()
-    for batch in tqdm(loader, total=n_val, desc='Segmenting artery-veins...', unit='batch', leave=True):
+    for batch in tqdm(loader, total=n_val, desc='Segmenting artery-veins', unit='batch', leave=True):
         # Unpack batch 
         av_imgs = batch['image'].to(device=device, dtype=torch.float32)
         # ori_width=batch['width']
@@ -163,12 +163,12 @@ def arteryvein_vessel_segmentation(av_networks, AUTOMORPH_RESULTS):
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
     all_img_names = np.concatenate(all_img_names).reshape(-1,)
-    av_preds_all = np.concatenate(av_preds_all).reshape(-1,912,912,3)
+    av_preds_all = np.concatenate(av_preds_all).reshape(-1,912,912)
 
     # Save out
     N_imgs = all_img_names.shape[0]
-    for name, img in tqdm(zip(all_img_names, av_preds_all), total=N_imgs, desc='Saving artery-vein segmentations...', leave=False):
-        prep.imwrite(os.path.join(results_dir, name + '.png'), 255*img)
+    for name, img in tqdm(zip(all_img_names, av_preds_all), total=N_imgs, desc='Saving artery-vein segmentations', leave=False):
+        prep.imwrite(os.path.join(results_dir, name + '.png'), (255*img).astype(np.uint8))
 
 
 def opticdisc_segmentation(od_networks, AUTOMORPH_RESULTS):
@@ -197,7 +197,7 @@ def opticdisc_segmentation(od_networks, AUTOMORPH_RESULTS):
     all_img_names = []
     device = utils.resolve_device()
     N_od_nets = len(od_networks)
-    for batch in tqdm(loader, total=n_val, desc='Segmenting optic disc...', unit='batch', leave=True):
+    for batch in tqdm(loader, total=n_val, desc='Segmenting optic disc', unit='batch', leave=True):
         # Unpack batch 
         od_imgs = batch['image'].to(device=device, dtype=torch.float32)
         # ori_width=batch['width']
@@ -236,12 +236,12 @@ def opticdisc_segmentation(od_networks, AUTOMORPH_RESULTS):
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
     all_img_names = np.concatenate(all_img_names).reshape(-1,)
-    od_preds_all = np.concatenate(od_preds_all).reshape(-1,912,912,3)
+    od_preds_all = np.concatenate(od_preds_all).reshape(-1,912,912)
 
     # Save out
     N_imgs = all_img_names.shape[0]
-    for name, img in tqdm(zip(all_img_names, od_preds_all), total=N_imgs, desc='Saving optic disc segmentations...', leave=False):
-        prep.imwrite(os.path.join(results_dir, name + '.png'), 255*img)
+    for name, img in tqdm(zip(all_img_names, od_preds_all), total=N_imgs, desc='Saving optic disc segmentations', leave=False):
+        prep.imwrite(os.path.join(results_dir, name + '.png'), (255*img).astype(np.uint8))
 
 
         

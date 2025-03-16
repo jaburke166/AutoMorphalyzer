@@ -19,6 +19,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import zipfile
 import requests
+import SimpleITK as sitk
 
 from segment.binary.model import Segmenter
 from segment.artery_vein.model import Generator_main, Generator_branch
@@ -165,27 +166,70 @@ def post_process_segs(preds, height, width, mode='binary'):
         pred_i = preds[i].cpu().detach().numpy()
         imsize = (height.item(), width.item())
         if mode == 'binary':
-            pred_i = pred_i.squeeze()
-            mask_i = (pred_i>=0.5).astype(np.uint8)
+            mask_i = pred_i>=0.5
+            mask_i = morphology.remove_small_objects(mask_i, 30, connectivity=5)
+            
         elif mode == 'artery_vein':
-            pred_a, pred_v, pred_c = pred_i==1, pred_i==2, pred_i==3
-            pred_a = morphology.remove_small_objects(pred_a, 30, connectivity=5)
-            pred_v = morphology.remove_small_objects(pred_v, 30, connectivity=5)
-            mask_i = np.concatenate([pred_a[...,np.newaxis], 
-                                         pred_c[...,np.newaxis], 
-                                         pred_v[...,np.newaxis]], axis=2)
+            pred_a, pred_v, pred_c = pred_i==1, pred_i==2, (pred_i==3).astype(float)
+            pred_a = morphology.remove_small_objects(pred_a, 30, connectivity=5).astype(float)
+            pred_v = morphology.remove_small_objects(pred_v, 30, connectivity=5).astype(float)
+            mask_i = (127/255)*pred_v + (191/255)*pred_a + pred_c
+            mask_i = cv2.resize(np.float32(mask_i), imsize, interpolation = cv2.INTER_NEAREST)
+            # Technically, old AutoMorph also then applied morphology.remove_small_objects again to the artery and vein masks
+            
         elif mode == 'optic_disc':
             pred_d, pred_c = pred_i==1, pred_i==2
-            pred_c = morphology.remove_small_objects(pred_c, 50)
-            pred_d = morphology.remove_small_objects(pred_d, 100)
-            mask_i = np.concatenate([pred_d[...,np.newaxis], 
-                                         pred_c[...,np.newaxis], 
-                                         np.zeros_like(pred_d)[...,np.newaxis]], axis=2)
+            pred_c = morphology.remove_small_objects(pred_c, 50).astype(float)
+            pred_d = morphology.remove_small_objects(pred_d, 100).astype(float)
+            mask_i = (127/255)*pred_d + pred_c
+            mask_i = cv2.resize(np.float32(mask_i), imsize, interpolation = cv2.INTER_NEAREST)
 
-        mask_i = cv2.resize(np.float32(mask_i), imsize, interpolation = cv2.INTER_NEAREST)
-        masks.append(mask_i.astype(np.uint8))
+        masks.append(mask_i)
 
     return np.asarray(masks)  
+
+
+
+def load_annotation(path, task='binary_vessel', raw=False):
+
+    # Default grayscale intensity encoding from ITK-Snap for 
+    # manual CFP segmentation
+    a_i = 191
+    o_i = 255
+    v_i = 127
+
+    # If it's already a numpy array, skip to organising segmentation
+    if isinstance(path, np.ndarray):
+        segmentations = path
+    else:
+        # Read the .nii image containing thevsegmentations
+        sitk_t1 = sitk.ReadImage(path)
+            
+        # and access the numpy array, saved as (1, N, N)
+        segmentations = sitk.GetArrayFromImage(sitk_t1)[0]
+
+    # returning raw segmentation map
+    if raw:
+        return segmentations
+
+    # if binary, only return vessels with label 255
+    if task == 'binary_vessel':
+        mask = (segmentations == o_i).astype(bool)
+    elif task == 'artery_vein':
+        artery = (segmentations == a_i)
+        vein = (segmentations == v_i)
+        overlap = (segmentations == o_i)
+        mask = np.concatenate([artery[...,np.newaxis], 
+                                overlap[...,np.newaxis],
+                                vein[...,np.newaxis]], axis=-1).astype(bool)
+    elif task == 'optic_disc':
+        od = (segmentations == v_i)
+        oc = (segmentations == o_i)
+        mask = np.concatenate([od[...,np.newaxis], 
+                               oc[...,np.newaxis],
+                               np.zeros_like(od)[...,np.newaxis]], axis=-1).astype(bool)
+
+    return mask
 
 
 
@@ -298,6 +342,7 @@ def superimpose_segmentations(cfp_img, binmask, avmask, disc_mask, cup_mask, out
     img_size = cfp_img.shape[0]
     stacked_img = np.hstack(3*[cfp_img])
     avmask = np.concatenate([avmask, np.sum(avmask > 0, axis=-1)[...,np.newaxis]], axis=-1)
+    avmask[...,1]  += avmask[...,0]
     cfp_vcmap = _generate_imgmask(binmask, None, 1)
     stacked_cmap = np.hstack([np.zeros_like(cfp_vcmap), cfp_vcmap, avmask])
     
