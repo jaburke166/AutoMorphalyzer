@@ -26,8 +26,9 @@ from preprocess import fundus_prep as prep
 DISC_COLS = ['laterality', 'macular_centred', 'disc_height', 'disc_width', 'cup_height', 'cup_width', 'CDR_vertical', 'CDR_horizontal']
 
 VESSEL_COLS = ['vessel_density', 'fractal_dimension', 'average_global_calibre', 'average_local_calibre', 'tortuosity_distance', 'tortuosity_density'] 
-LARGE_VESSEL_COLS = ['CRAE_Knudtson_artery_B', 'CRAE_Knudtson_artery_C', 'CRVE_Knudtson_vein_B', 'CRVE_Knudtson_vein_B', 'AVR_B', 'AVR_C']
+LARGE_VESSEL_COLS = ['CRAE_Knudtson_artery_B', 'CRAE_Knudtson_artery_C', 'CRVE_Knudtson_vein_B', 'CRVE_Knudtson_vein_C', 'AVR_B', 'AVR_C']
 ALL_COLS = [f'{f}_{v}_{z}'for z in ['whole', 'B', 'C']  for v in ['binary', 'artery', 'vein'] for f in VESSEL_COLS] + LARGE_VESSEL_COLS
+
 
 def boxcount(Z, k):
     S = np.add.reduceat(np.add.reduceat(Z,
@@ -356,18 +357,26 @@ def get_disc_metrics(disc_mask, cup_mask, vessel_mask):
 
     # Metrics for the optic disc
     img_size = disc_mask.shape[0]
-    disc_index = np.where(disc_mask>0)
-    disc_index_x = disc_index[1]
-    disc_index_y = disc_index[0]
-    disc_metrics['disc_height'] = np.max(disc_index_y)-np.min(disc_index_y)
-    disc_metrics['disc_width'] = np.max(disc_index_x)-np.min(disc_index_x)
+    try:
+        disc_index = np.where(disc_mask>0)
+        disc_index_x = disc_index[1]
+        disc_index_y = disc_index[0]
+        disc_metrics['disc_height'] = np.max(disc_index_y)-np.min(disc_index_y)
+        disc_metrics['disc_width'] = np.max(disc_index_x)-np.min(disc_index_x)
+    except:
+        disc_metrics['cup_height'] = -1
+        disc_metrics['cup_width'] = -1
 
     # Metrics for the optic cup
-    cup_index = np.where(cup_mask>0)
-    cup_index_x = cup_index[1]
-    cup_index_y = cup_index[0]
-    disc_metrics['cup_height'] = np.max(cup_index_y)-np.min(cup_index_y)
-    disc_metrics['cup_width'] = np.max(cup_index_x)-np.min(cup_index_x)
+    try:
+        cup_index = np.where(cup_mask>0)
+        cup_index_x = cup_index[1]
+        cup_index_y = cup_index[0]
+        disc_metrics['cup_height'] = np.max(cup_index_y)-np.min(cup_index_y)
+        disc_metrics['cup_width'] = np.max(cup_index_x)-np.min(cup_index_x)
+    except:
+        disc_metrics['cup_height'] = -1
+        disc_metrics['cup_width'] = -1
 
     # Measure cup-to-disc ratios
     try:
@@ -378,35 +387,42 @@ def get_disc_metrics(disc_mask, cup_mask, vessel_mask):
         disc_metrics['CDR_horizontal'] = -1
 
     # Centre of the optic cup (and thus disc)
-    cup_centre = measure.centroid(cup_mask)
-    disc_metrics['cup_centre_x'] = int(cup_centre[1])
-    disc_metrics['cup_centre_y'] = int(cup_centre[0])
-
-    # Sense checking the detected disc and cup metrics
-    condition = disc_metrics['disc_width']<(img_size/3) and \
-                disc_metrics['disc_height']<(img_size/3) and \
-                disc_metrics['cup_centre_x']<=np.max(disc_index_x) and \
-                disc_metrics['cup_centre_x']>=np.min(disc_index_x) and \
-                disc_metrics['cup_centre_y']<=np.max(disc_index_y) and \
-                disc_metrics['cup_centre_y']>=np.min(disc_index_y) and \
-                disc_metrics['cup_height']<disc_metrics['disc_height'] and \
-                disc_metrics['cup_width']<disc_metrics['disc_width']
-
-    # Work out centering of the scan, i.e. whether the optic disc is centred in the image
-    # We define this as the optic disc being within 10% of the image centre
-    disc_metrics['macular_centred'] = True
-    if condition:
-        horizontal_distance = np.absolute(np.mean(disc_index_y)-img_size/2)
-        vertical_distance = np.absolute(np.mean(disc_index_x)-img_size/2)
-        distance_ = np.sqrt(np.square(horizontal_distance)+np.square(vertical_distance))
-        if (distance_/img_size)<0.1:
-            disc_metrics['macular_centred'] = False
-
-    # Infer laterality based on how much vessel was detected either side of the disc centre, i.e. 
-    # regardless of centring, there should be more vasculature toward the macula than the temporal side
-    disc_metrics['laterality'] = 'Left'
-    if vessel_mask[:, :disc_metrics['cup_centre_x']].sum() > vessel_mask[:, disc_metrics['cup_centre_x']:].sum():
-        disc_metrics['laterality'] = 'Right'
+    try:
+        cup_centre = measure.centroid(cup_mask)
+        disc_metrics['cup_centre_x'] = int(cup_centre[1])
+        disc_metrics['cup_centre_y'] = int(cup_centre[0])
+    
+        # Sense checking the detected disc and cup metrics
+        condition = disc_metrics['disc_width']<(img_size/3) and \
+                    disc_metrics['disc_height']<(img_size/3) and \
+                    disc_metrics['cup_centre_x']<=np.max(disc_index_x) and \
+                    disc_metrics['cup_centre_x']>=np.min(disc_index_x) and \
+                    disc_metrics['cup_centre_y']<=np.max(disc_index_y) and \
+                    disc_metrics['cup_centre_y']>=np.min(disc_index_y) and \
+                    disc_metrics['cup_height']<disc_metrics['disc_height'] and \
+                    disc_metrics['cup_width']<disc_metrics['disc_width']
+    
+        # Work out centering of the scan, i.e. whether the optic disc is centred in the image
+        # We define this as the optic disc being within 10% of the image centre
+        disc_metrics['macular_centred'] = True
+        if condition:
+            horizontal_distance = np.absolute(np.mean(disc_index_y)-img_size/2)
+            vertical_distance = np.absolute(np.mean(disc_index_x)-img_size/2)
+            distance_ = np.sqrt(np.square(horizontal_distance)+np.square(vertical_distance))
+            if (distance_/img_size)<0.1:
+                disc_metrics['macular_centred'] = False
+    
+        # Infer laterality based on how much vessel was detected either side of the disc centre, i.e. 
+        # regardless of centring, there should be more vasculature toward the macula than the temporal side
+        disc_metrics['laterality'] = 'Left'
+        if vessel_mask[:, :disc_metrics['cup_centre_x']].sum() > vessel_mask[:, disc_metrics['cup_centre_x']:].sum():
+            disc_metrics['laterality'] = 'Right'
+    except:
+        disc_metrics['macular_centred'] = -1
+        disc_metrics['laterality'] = -1
+        disc_metrics['cup_centre_x'] = -1
+        disc_metrics['cup_centre_y'] = -1
+        
 
     return disc_metrics
 
@@ -421,9 +437,15 @@ def merge_results(all_cfp_dict, all_disc_metrics, output_directory):
     feature_df.columns = ['_'.join(col).strip() for col in feature_df.columns.values]
     feature_df = feature_df[feature_df.columns[~np.all(feature_df == -1, axis=0).values]]
 
-    # Add in Arteriovenule ratio
-    feature_df['AVR_B'] = feature_df.CRAE_Knudtson_artery_B / feature_df.CRVE_Knudtson_vein_B
-    feature_df['AVR_C'] = feature_df.CRAE_Knudtson_artery_C / feature_df.CRVE_Knudtson_vein_C
+    # Add in Arteriovenule ratio with Try-Except blocks
+    try:
+        feature_df['AVR_B'] = feature_df.CRAE_Knudtson_artery_B / feature_df.CRVE_Knudtson_vein_B
+    except:
+        feature_df['AVR_B'] = -1
+    try:
+        feature_df['AVR_C'] = feature_df.CRAE_Knudtson_artery_C / feature_df.CRVE_Knudtson_vein_C
+    except:
+        feature_df['AVR_C'] = -1
     
     # Set AVRs to 1 where any one of CRAE/CRVE failed
     feature_df['AVR_B'] = [-1 if avr < 0 else (-1 if avr==-1 else avr) for avr in feature_df['AVR_B']]
@@ -455,18 +477,16 @@ def df_to_dict(img_feat_df):
 
     vessel_types = ['binary', 'artery', 'vein']
     zone_types = ['whole', 'B', 'C']
-    img_z_dict = {zone:{} for zone in zone_types}
-    img_all_dict = {zone:img_z_dict for zone in vessel_types}
-    # img_feat_dict = {'whole':{}, ''}
+    img_all_dict = {vtype:{zone:{} for zone in zone_types} for vtype in vessel_types}
     for col in img_feat_df.columns:
         if 'AVR' in col:
             continue
         vessel_col = '_'.join(col.split('_')[:2]) if 'calibre' not in col else '_'.join(col.split('_')[:3])
         value = np.unique(img_feat_df[col])[0]
         for vtype in vessel_types:
-            if vtype in col:
+            if f'_{vtype}' in col:
                 for zone in zone_types:
-                    if zone in col:
+                    if f'_{zone}' in col:
                         img_all_dict[vtype][zone][vessel_col] = value
 
     return img_all_dict
