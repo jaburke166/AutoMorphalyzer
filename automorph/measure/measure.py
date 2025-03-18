@@ -446,7 +446,7 @@ def merge_results(all_cfp_dict, all_disc_metrics, output_directory):
         feature_df['AVR_C'] = feature_df.CRAE_Knudtson_artery_C / feature_df.CRVE_Knudtson_vein_C
     except:
         feature_df['AVR_C'] = -1
-    
+
     # Set AVRs to 1 where any one of CRAE/CRVE failed
     feature_df['AVR_B'] = [-1 if avr < 0 else (-1 if avr==-1 else avr) for avr in feature_df['AVR_B']]
     feature_df['AVR_C'] = [-1 if avr < 0 else (-1 if avr==-1 else avr) for avr in feature_df['AVR_C']]
@@ -460,14 +460,17 @@ def merge_results(all_cfp_dict, all_disc_metrics, output_directory):
     disc_df = utils.nested_dict_to_df(all_disc_metrics).reset_index()
     disc_df.rename({'index':'Filename'}, axis=1, inplace=True)
     disc_df = disc_df[['Filename']+DISC_COLS]
+    disc_df['img_name'] = disc_df.Filename.str.split('.', expand=True)[0]
 
-    # Merge with quality
+    # Merge with quality on filename to add correct file extension
     quickqual_df = pd.read_csv(os.path.join(output_directory, 'M0', 'crop_info.csv'))[['Name', 'quality']]
-    quickqual_df['Name'] = quickqual_df['Name'].str.split('.',expand=True)[0] + '.' + disc_df.Filename.str.split('.',expand=True)[1]
-    quickqual_df.rename({'Name':'Filename', 'quality':'QuickQual_quality'}, axis=1, inplace=True)
+    quickqual_df['img_name'] = quickqual_df.Name.str.split('.', expand=True)[0]
+    metric_df = disc_df.merge(quickqual_df, on='img_name')
+    metric_df.drop(['Name', 'img_name'], axis=1, inplace=True)
+    metric_df.rename({'quality':'QuickQual_quality'}, axis=1, inplace=True)
 
     # Merge dataframes
-    metric_df = (disc_df.merge(quickqual_df, on='Filename')).merge(feature_df, on='Filename')
+    metric_df = metric_df.merge(feature_df, on='Filename')
 
     return metric_df
 
