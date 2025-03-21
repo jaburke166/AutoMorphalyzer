@@ -80,6 +80,18 @@ def run(args):
                                 AUTOMORPH_RESULTS)
     print('\nAutoMorphalyzer analysis complete!')
 
+    # Create annotations directory for end-users to put .nii.gz files into
+    # alongside a README.txt file
+    text_for_readme = ['Please place your annotations in this directory. Annotations should be in .nii.gz format.',
+                        'Please refer to the instructions document in AutoMorphalyzer/manual_annotations for more information.',
+                        'In particular, this contains instructions on how to use ITK-Snap to create annotations, and how to save them in the correct format.',
+                        'If you have any questions, please contact the developers (Jamie Burke, Jamie.Burke@ed.ac.uk).']
+    if not os.path.exists(f'{AUTOMORPH_RESULTS}/annotations'):
+        os.makedirs(f'{AUTOMORPH_RESULTS}/annotations')
+        with open(f'{AUTOMORPH_RESULTS}/annotations/README.txt', 'w') as f:
+            for line in text_for_readme:
+                f.write(line + '\n')
+
 
 # Once called from terminal
 if __name__ == "__main__":
