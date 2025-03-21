@@ -536,6 +536,7 @@ def feature_measurement(image_list, output_directory):
             cfp_img = prep.imread(os.path.join(image_directory, fname + '.png'))
 
             # Check for any manual annotations and load in, otherwise load in original segmentation masks
+            # If manual annotations detected, rename to _used.nii.gz to not be detected again in another run
             binmask_path = os.path.join(annotate_directory, f'{fname}_binary_vessel.nii.gz')
             av_path = os.path.join(annotate_directory, f'{fname}_artery_vein.nii.gz')
             od_path = os.path.join(annotate_directory, f'{fname}_optic_disc.nii.gz')
@@ -544,12 +545,14 @@ def feature_measurement(image_list, output_directory):
             manual_annot = False
             for path, vtype in zip([binmask_path, av_path, od_path], ['binary_vessel', 'artery_vein', 'optic_disc']):
                 if os.path.exists(path):
+                    path_fname = os.path.split(path)[1]
+                    used_path = os.path.join(annotate_directory, path_fname.split(".")[0]+"_used.nii.gz")
                     v_manuals.append(vtype)
                     manual_annot = True
                     mask = utils.load_annotation(path, vtype).astype(bool)
-                    if os.path.exists(path.split(".")[0]+"_used.nii.gz"):
-                        os.remove(path.split(".")[0]+"_used.nii.gz")
-                    os.rename(path, path.split(".")[0]+"_used.nii.gz")
+                    if os.path.exists(used_path):
+                        os.remove(used_path)
+                    os.rename(path, used_path)
                 else:
                     mask = prep.imread(os.path.join(segmentation_directory, vtype, 'raw_binary', fname + '.png'))[...,0]
                     mask = utils.load_annotation(mask, vtype).astype(bool)
