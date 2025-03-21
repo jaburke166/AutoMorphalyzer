@@ -526,6 +526,7 @@ def feature_measurement(image_list, output_directory):
     img_size = (912,912)
     N = len(image_list)
     problem_log = []
+    manual_annotation_paths = []
     for i, img_name in tqdm(enumerate(image_list), total=N, desc='Visualisation and feature measurement', unit='image'):
 
         try:
@@ -536,7 +537,6 @@ def feature_measurement(image_list, output_directory):
             cfp_img = prep.imread(os.path.join(image_directory, fname + '.png'))
 
             # Check for any manual annotations and load in, otherwise load in original segmentation masks
-            # If manual annotations detected, rename to _used.nii.gz to not be detected again in another run
             binmask_path = os.path.join(annotate_directory, f'{fname}_binary_vessel.nii.gz')
             av_path = os.path.join(annotate_directory, f'{fname}_artery_vein.nii.gz')
             od_path = os.path.join(annotate_directory, f'{fname}_optic_disc.nii.gz')
@@ -545,14 +545,10 @@ def feature_measurement(image_list, output_directory):
             manual_annot = False
             for path, vtype in zip([binmask_path, av_path, od_path], ['binary_vessel', 'artery_vein', 'optic_disc']):
                 if os.path.exists(path):
-                    path_fname = os.path.split(path)[1]
-                    used_path = os.path.join(annotate_directory, path_fname.split(".")[0]+"_used.nii.gz")
+                    manual_annotation_paths.append(path)
                     v_manuals.append(vtype)
                     manual_annot = True
                     mask = utils.load_annotation(path, vtype).astype(bool)
-                    if os.path.exists(used_path):
-                        os.remove(used_path)
-                    os.rename(path, used_path)
                 else:
                     mask = prep.imread(os.path.join(segmentation_directory, vtype, 'raw_binary', fname + '.png'))[...,0]
                     mask = utils.load_annotation(mask, vtype).astype(bool)
@@ -561,7 +557,7 @@ def feature_measurement(image_list, output_directory):
 
             # Print out to end-user of detection of manual annotation
             if manual_annot:
-                v_str = ',' .join(v_manuals)
+                v_str = ', ' .join(v_manuals)
                 print(f'Detected {v_str} manual annotations for {img_name}. Using these for feature measurement.')
 
             # Post-process disc segmentation to obtain radius and centre
@@ -577,11 +573,9 @@ def feature_measurement(image_list, output_directory):
                     prev_analysed = True
                     # print(f'{img_name} previously measured. Skipping!')
                     img_df = results_df[results_df.Filename == img_name]
-                    all_disc_metrics[img_name] = img_df[DISC_COLS].iloc[0].to_dict()
-                    
+                    all_disc_metrics[img_name] = img_df[DISC_COLS].iloc[0].to_dict()   
                     img_feat_df = img_df[[col for col in ALL_COLS if col in img_df.columns]]
                     all_cfp_dict[img_name] = df_to_dict(img_feat_df)
-
                     continue
 
             # Superimpose segmentations together and save out, only if not previously analysed or manual annotation
@@ -640,3 +634,13 @@ def feature_measurement(image_list, output_directory):
 
     # Save out dataframe
     metric_df.to_csv(os.path.join(output_directory, 'M3', 'feature_measurements.csv'), index=False)
+
+    # Rename the manual annotation paths to prevent pipeline from detecting them again
+    # This now occurs right at the end of the pipeline to prevent any unexpected errors from renaming.
+    if len(manual_annotation_paths) > 0:
+        for path in manual_annotation_paths:
+            path_fname = os.path.split(path)[1]
+            used_path = os.path.join(annotate_directory, path_fname.split(".")[0]+"_used.nii.gz")
+            if os.path.exists(used_path):
+                os.remove(used_path)
+            os.rename(path, used_path)

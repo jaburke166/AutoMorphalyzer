@@ -171,18 +171,24 @@ def post_process_segs(preds, height, width, mode='binary'):
             
         elif mode == 'artery_vein':
             pred_a, pred_v, pred_c = pred_i==1, pred_i==2, (pred_i==3).astype(float)
-            pred_a = morphology.remove_small_objects(pred_a, 30, connectivity=5).astype(float)
-            pred_v = morphology.remove_small_objects(pred_v, 30, connectivity=5).astype(float)
-            mask_i = (127/255)*pred_v + (191/255)*pred_a + pred_c
-            mask_i = cv2.resize(np.float32(mask_i), imsize, interpolation = cv2.INTER_NEAREST)
+            # pred_a = morphology.remove_small_objects(pred_a, 30, connectivity=5).astype(float)
+            # pred_v = morphology.remove_small_objects(pred_v, 30, connectivity=5).astype(float)
+            pred_acv = np.concatenate([pred[...,np.newaxis] for pred in [pred_a, pred_c, pred_v]], axis=-1)
+            mask_i = (cv2.resize(np.float32(pred_acv), imsize, interpolation = cv2.INTER_CUBIC) >= 0.5).astype(int)
+            mask_i = (127/255)*mask_i[...,-1] + (191/255)*mask_i[...,0] + mask_i[...,1]
+            # Here, we're using cubic interpolation to preserve pixel continuity in resizing. This doesn't add
+            # huge overhead going from 712 -> 912 pixels, but does help with the final segmentation quality. 
             # Technically, old AutoMorph also then applied morphology.remove_small_objects again to the artery and vein masks
             
         elif mode == 'optic_disc':
             pred_d, pred_c = pred_i==1, pred_i==2
             pred_c = morphology.remove_small_objects(pred_c, 50).astype(float)
             pred_d = morphology.remove_small_objects(pred_d, 100).astype(float)
-            mask_i = (127/255)*pred_d + pred_c
-            mask_i = cv2.resize(np.float32(mask_i), imsize, interpolation = cv2.INTER_NEAREST)
+            pred_dc = np.concatenate([pred[...,np.newaxis] for pred in [pred_d, pred_c, np.zeros_like(pred_d)]], axis=-1)
+            mask_i = (cv2.resize(np.float32(pred_dc), imsize, interpolation = cv2.INTER_CUBIC) >= 0.5).astype(int)
+            mask_i = (127/255)*mask_i[...,0] + mask_i[...,1]
+            # Here, we're using cubic interpolation to preserve pixel continuity in resizing. This doesn't add
+            # huge overhead going from 512 -> 912 pixels, but does help with the final segmentation quality. 
 
         masks.append(mask_i)
 
