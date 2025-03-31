@@ -171,10 +171,10 @@ def post_process_segs(preds, height, width, mode='binary'):
             
         elif mode == 'artery_vein':
             pred_a, pred_v, pred_c = pred_i==1, pred_i==2, (pred_i==3).astype(float)
-            # pred_a = morphology.remove_small_objects(pred_a, 30, connectivity=5).astype(float)
-            # pred_v = morphology.remove_small_objects(pred_v, 30, connectivity=5).astype(float)
+            pred_a = morphology.remove_small_objects(pred_a, 30, connectivity=5).astype(float)
+            pred_v = morphology.remove_small_objects(pred_v, 30, connectivity=5).astype(float)
             pred_acv = np.concatenate([pred[...,np.newaxis] for pred in [pred_a, pred_c, pred_v]], axis=-1)
-            mask_i = (cv2.resize(np.float32(pred_acv), imsize, interpolation = cv2.INTER_CUBIC) >= 0.5).astype(int)
+            mask_i = (cv2.resize(np.float32(pred_acv), imsize, interpolation = cv2.INTER_CUBIC) > 0.25).astype(int)
             mask_i = (127/255)*mask_i[...,-1] + (191/255)*mask_i[...,0] + mask_i[...,1]
             # Here, we're using cubic interpolation to preserve pixel continuity in resizing. This doesn't add
             # huge overhead going from 712 -> 912 pixels, but does help with the final segmentation quality. 
@@ -316,25 +316,22 @@ def generate_zonal_masks(img_shape, od_radius, od_centre):
         if roi_type == 'whole':
             mask = np.ones(img_shape)
         else:
-            od_diameter = 2*od_radius
             if roi_type == "B":
                 od_circ = _create_circular_mask(img_shape=img_shape, 
                                             radius=2*od_radius, 
-                                            center=od_centre)[0]
+                                            center=od_centre)
                 
                 mask  = _create_circular_mask(img_shape=img_shape, 
                                                     radius=3*od_radius, 
                                                     center=od_centre)
-                macula_p = 3*od_diameter
             elif roi_type == "C":
                 od_circ = _create_circular_mask(img_shape=img_shape, 
                                             radius=2*od_radius, 
-                                            center=od_centre)[0]
+                                            center=od_centre)
                 
                 mask = _create_circular_mask(img_shape=img_shape, 
                                                 radius=5*od_radius, 
                                                 center=od_centre)
-                macula_p = 5*od_diameter
 
             mask -= od_circ
         mask_rois[roi_type] = mask
