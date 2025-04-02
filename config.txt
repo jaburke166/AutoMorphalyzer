@@ -8,4 +8,4 @@ input_directory: /Users/s1522100/Documents/Post-Doc/AutoMorphalyzer/example_data
 output_directory: /Users/s1522100/Documents/Post-Doc/AutoMorphalyzer/example_data/test_itest_pvbm_v2
 
 # This flags whether to use AutoMorph's segmentation models (1), or PVBM's segmentation models (0)
-AutoMorph_models: 0
+AutoMorph_models: 1
