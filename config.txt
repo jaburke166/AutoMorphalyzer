@@ -2,7 +2,10 @@
 # MAKE SURE NAMES AND INPUTS ARE SEPARATED WITH ": " [colon-spacebar]
 
 # This is the folder which .vol files will be read from and analysed
-input_directory: /Users/s1522100/Documents/Post-Doc/AutoMorphalyzer/example_data/test_images
+input_directory: /Users/s1522100/Documents/Post-Doc/AutoMorphalyzer/example_data/test_itest
 
 # This is the folder which will save all results into
-output_directory: /Users/s1522100/Documents/Post-Doc/AutoMorphalyzer/example_data/test_output
+output_directory: /Users/s1522100/Documents/Post-Doc/AutoMorphalyzer/example_data/test_itest_pvbm_v2
+
+# This flags whether to use AutoMorph's segmentation models (1), or PVBM's segmentation models (0)
+AutoMorph_models: 0

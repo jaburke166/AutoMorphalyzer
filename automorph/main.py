@@ -11,7 +11,7 @@ sys.path.append(PACKAGE_PATH)
 
 import utils
 from preprocess import preprocess
-from segment import segment
+from segment import segment, segment_pvbm
 from measure import measure
 
 def run(args):
@@ -21,6 +21,7 @@ def run(args):
     # Extract input/output directories
     AUTOMORPH_DATA = args['input_directory']
     AUTOMORPH_RESULTS = args['output_directory']
+    AUTOMORPH_WEIGHTS = args["AutoMorph_models"]
 
     # Detect supported image file types
     image_list = []
@@ -36,11 +37,16 @@ def run(args):
         print(f'Cannot find any supported files in {AUTOMORPH_DATA}. Please check directory. Exiting analysis')
         return
     
+    if AUTOMORPH_WEIGHTS:
+        print("\nRunning pipeline using AutoMorph's original model weights.")
+    else:
+        print("\nRunning pipeline using PVBM's model weights.")
+    
     # Checking for model weights and downloading if so
     print('\nChecking for model weights, this may take a few minutes if model weights are not already downloaded...')
-    utils.check_unpack_model_weights('binary', SCRIPT_PATH)
-    utils.check_unpack_model_weights('artery_vein', SCRIPT_PATH)
-    utils.check_unpack_model_weights('optic_disc', SCRIPT_PATH)
+    utils.check_unpack_model_weights('binary', SCRIPT_PATH, AUTOMORPH_WEIGHTS)
+    utils.check_unpack_model_weights('artery_vein', SCRIPT_PATH, AUTOMORPH_WEIGHTS)
+    utils.check_unpack_model_weights('optic_disc', SCRIPT_PATH, AUTOMORPH_WEIGHTS)
     print('Model weights ready to go!')
 
     # Creating directory of pre-processed images
@@ -50,34 +56,38 @@ def run(args):
 
     # Running pre-processing and quality extraction
     print('\nPre-processing module.')
-    preprocess.preprocess_dataset(AUTOMORPH_DATA, 
-                                   image_list, 
-                                   AUTOMORPH_RESULTS)
+    preprocess.preprocess_dataset(AUTOMORPH_DATA, image_list, AUTOMORPH_RESULTS)
     print('Done!')
 
-    # Load binary segmentation models
-    print('\nBinary vessel segmentation.')
-    bin_networks = utils.get_binary_models()
-    segment.binary_vessel_segmentation(bin_networks,
-                                       AUTOMORPH_RESULTS)
-    del bin_networks
+    # Segmentation, taking into account flag for using AutoMorph weights or PVBM model weights
+    # Uses AutoMorph weights (Zhou, et al.)
+    if AUTOMORPH_WEIGHTS:
+        print('\nBinary vessel segmentation.')
+        bin_networks = utils.get_binary_models()
+        segment.binary_vessel_segmentation(bin_networks, AUTOMORPH_RESULTS)
+        del bin_networks
 
-    print('\nArtery-Vein vessel segmentation.')
-    av_networks = utils.get_av_models()
-    segment.arteryvein_vessel_segmentation(av_networks,
-                                           AUTOMORPH_RESULTS)
-    del av_networks
+        print('\nArtery-Vein vessel segmentation.')
+        av_networks = utils.get_av_models()
+        segment.arteryvein_vessel_segmentation(av_networks, AUTOMORPH_RESULTS)
+        del av_networks
 
-    print('\nOptic Disc vessel segmentation.')
-    od_networks = utils.get_od_models()
-    segment.opticdisc_segmentation(od_networks,
-                                   AUTOMORPH_RESULTS)
-    del od_networks
+        print('\nOptic Disc/Cup segmentation.')
+        od_networks = utils.get_od_models()
+        segment.opticdisc_segmentation(od_networks, AUTOMORPH_RESULTS)
+        del od_networks
+
+    # Uses PVBM (Fhima, et al.)
+    else:
+        print('\nVessel segmentation.')
+        segment_pvbm.vessel_segmentation(AUTOMORPH_RESULTS)
+
+        print('\nOptic Disc segmentation.')
+        segment_pvbm.opticdisc_segmentation(AUTOMORPH_RESULTS)
     print('Segmentation module complete!')
 
     print('\nFeature measurement module.')
-    measure.feature_measurement(image_list, 
-                                AUTOMORPH_RESULTS)
+    measure.feature_measurement(image_list, AUTOMORPH_RESULTS, AUTOMORPH_WEIGHTS)
     print('\nAutoMorphalyzer analysis complete!')
 
     # Create annotations directory for end-users to put .nii.gz files into
@@ -120,5 +130,20 @@ if __name__ == "__main__":
                     os.makedirs(param)
             continue
 
+        # Check numerical value inputs and custom slab input
+        param = param.replace(" ", "")
+        if param == "":
+            msg = f"No value entered for {key}. Please check config.txt. Exiting analysis"
+            sys.exit(msg)
+        else:
+            try:
+                int(param)
+            except:
+                msg = print(f"Value {param} for parameter {key} is not valid. Please check config.txt, Exiting analysis.")
+                sys.exit(msg)
+
+    # Construct args dict and run
+    args = {key:val if ("directory" in key) else int(val) for (key,val) in params.items()}
+
     # run analysis
-    run(params)
+    run(args)

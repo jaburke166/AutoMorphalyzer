@@ -21,9 +21,9 @@ import zipfile
 import requests
 import SimpleITK as sitk
 
-from segment.binary.model import Segmenter
-from segment.artery_vein.model import Generator_main, Generator_branch
-from segment.optic_disc.models import get_model
+from automorph.segment.binary.model import Segmenter
+from automorph.segment.artery_vein.model import Generator_main, Generator_branch
+from automorph.segment.optic_disc.models import get_model
 
 
 
@@ -44,23 +44,67 @@ def _download_zipfile(url, filepath):
 
     if total_size != 0 and progress_bar.n != total_size:
         raise RuntimeError("Could not download file")
+    
+
+
+def download_model_PVBM(model_url, model_type, destination_folder):
+
+    fname = os.path.split(model_url)[1]
+    save_path = os.path.join(destination_folder, fname) 
+
+    if not os.path.exists(save_path):
+        os.makedirs(destination_folder, exist_ok=True)
+        print(f"Downloading {model_url} to {destination_folder}...")
+
+        # Streaming, so we can iterate over the response.
+        response = requests.get(model_url, stream=True)
+        response.raise_for_status()
+
+        # Sizes in bytes.
+        total_size = int(response.headers.get("content-length", 0))
+        chunk_size = 8192
+
+        with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
+            with open(save_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size):
+                    progress_bar.update(len(chunk))
+                    f.write(chunk)
+    else:
+        print(f'{model_type.capitalize()} model weights already downloaded!')
 
 
 
-def check_unpack_model_weights(model_type, save_path):
+
+def check_unpack_model_weights(model_type, save_path, automorph_weights):
+
+    destination_folder = os.path.join(save_path, 'segment', model_type) 
 
     if model_type == 'binary':
+        # If using PVBM, i.e. automorph_weights=0, then we don't need to download the binary models
+        if not automorph_weights:
+            return
         N_model = 10
         zip_url = 'https://github.com/jaburke166/AutoMorphalyzer/releases/download/v1.0/binary_model_weights.zip'
-    elif model_type == 'artery_vein':
-        N_model = 24
-        zip_url = 'https://github.com/jaburke166/AutoMorphalyzer/releases/download/v1.0/arteryvein_model_weights.zip'
-    elif model_type == 'optic_disc':
-        N_model = 8
-        zip_url = 'https://github.com/jaburke166/AutoMorphalyzer/releases/download/v1.0/opticdisc_model_weights.zip'
 
-    # Destination for zip and model weights
-    destination_folder = os.path.join(save_path, 'segment', model_type)   
+    elif model_type == 'artery_vein':
+        if automorph_weights:
+            N_model = 24
+            zip_url = 'https://github.com/jaburke166/AutoMorphalyzer/releases/download/v1.0/arteryvein_model_weights.zip'
+        else:
+            model_url = 'https://github.com/jaburke166/AutoMorphalyzer/releases/download/v1.0_PVBM/lunet_modelbest.h5'
+            download_model_PVBM(model_url, model_type, os.path.join(destination_folder, 'pvbm_weights'))
+            return
+
+    elif model_type == 'optic_disc':
+        if automorph_weights:
+            N_model = 8
+            zip_url = 'https://github.com/jaburke166/AutoMorphalyzer/releases/download/v1.0/opticdisc_model_weights.zip'
+        else:
+            model_url = 'https://github.com/jaburke166/AutoMorphalyzer/releases/download/v1.0_PVBM/lunetv2_odc.onnx'
+            download_model_PVBM(model_url, model_type, os.path.join(destination_folder, 'pvbm_weights'))
+            return
+
+    # Destination for zip and model weights  
     zip_fname = os.path.split(zip_url)[1]
     zip_path = os.path.join(destination_folder, zip_fname)
 
@@ -193,6 +237,33 @@ def post_process_segs(preds, height, width, mode='binary'):
         masks.append(mask_i)
 
     return np.asarray(masks)  
+
+
+
+def process_vesselmap(im, 
+                    strel = morphology.disk(5), 
+                    hole_size = 10, 
+                    object_size = 150):
+    imc = morphology.binary_closing(im, strel)*1.
+    im = im/np.max(im)
+    im_out = np.copy(im)
+    imdiff = np.logical_xor(im, imc)*1.
+    labeldiff = measure.label(imdiff)
+    rp = measure.regionprops(labeldiff)
+
+    for region in rp:
+        if region.area < 10:
+            continue
+        if region.eccentricity < 0.95:
+            continue
+        if region.axis_minor_length > 5:
+            continue
+        im_out[tuple(np.rot90(region.coords, -1))] = 1.
+    
+    im_out = morphology.remove_small_holes(im_out > 0, hole_size)*1.
+    im_out = morphology.remove_small_objects(im_out > 0, object_size)*1.
+    
+    return im_out
 
 
 

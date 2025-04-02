@@ -350,7 +350,7 @@ def vessel_metrics(vessels,
 
 
 
-def get_disc_metrics(disc_mask, cup_mask, vessel_mask):
+def get_disc_metrics(disc_mask, cup_mask, vessel_mask, automorph_weights):
 
     # Empty dictionary of metrics
     disc_metrics = {}
@@ -367,7 +367,6 @@ def get_disc_metrics(disc_mask, cup_mask, vessel_mask):
         disc_metrics['cup_height'] = -1
         disc_metrics['cup_width'] = -1
 
-    # Metrics for the optic cup
     try:
         cup_index = np.where(cup_mask>0)
         cup_index_x = cup_index[1]
@@ -387,6 +386,7 @@ def get_disc_metrics(disc_mask, cup_mask, vessel_mask):
         disc_metrics['CDR_horizontal'] = -1
 
     # Centre of the optic cup (and thus disc)
+
     try:
         cup_centre = measure.centroid(cup_mask)
         disc_metrics['cup_centre_x'] = int(cup_centre[1])
@@ -422,6 +422,15 @@ def get_disc_metrics(disc_mask, cup_mask, vessel_mask):
         disc_metrics['laterality'] = -1
         disc_metrics['cup_centre_x'] = -1
         disc_metrics['cup_centre_y'] = -1
+
+    # Metrics for the optic cup
+    if not automorph_weights:
+        disc_metrics['cup_height'] = -1
+        disc_metrics['cup_width'] = -1
+        disc_metrics['cup_centre_x'] = -1
+        disc_metrics['cup_centre_y'] = -1
+        disc_metrics['CDR_vertical'] = -1
+        disc_metrics['CDR_horizontal'] = -1
         
 
     return disc_metrics
@@ -496,7 +505,7 @@ def df_to_dict(img_feat_df):
 
 
 
-def feature_measurement(image_list, output_directory):
+def feature_measurement(image_list, output_directory, automorph_weights):
 
     # Directory structure
     save_path = os.path.join(output_directory, 'M3', 'segmentations')
@@ -583,7 +592,7 @@ def feature_measurement(image_list, output_directory):
                 utils.superimpose_segmentations(cfp_img, binmask, avmask, disc_mask, cup_mask, save_path, fname)
 
             # Create dictionary to store disc metrics for each image
-            all_disc_metrics[img_name] = get_disc_metrics(disc_mask, cup_mask, binmask)
+            all_disc_metrics[img_name] = get_disc_metrics(disc_mask, cup_mask, binmask, automorph_weights)
 
             # Create dictionary to store vessel metrics for each image
             all_cfp_dict[img_name] = {}
