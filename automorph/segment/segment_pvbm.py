@@ -20,7 +20,7 @@ import PIL
 from torchvision import transforms
 import cv2
 import tensorflow as tf
-from automorph.segment.PVBM import model
+from automorph.segment.artery_vein.PVBM import model
 from automorph import utils
 from pathlib import Path
 from tqdm import tqdm
