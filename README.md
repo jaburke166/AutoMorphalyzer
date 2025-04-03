@@ -57,6 +57,10 @@ Please contact **Jamie.Burke@ed.ac.uk** if you have questions.
 
 * This pipeline also allows manual editing of binary vessel, artery-vein and optic disc-cup segmentations using ITK-Snap and fed back into pipeline to recompute feature measuremements.
 
+* This pipeline has an addition set of segmentation models besides AutoMorph's original segmentation models. To use these models instead, flag `AutoMorph_models` as `0` in `config.txt` before running the pipleime. These are models developed by Fhima, et al. for their automatic pipeline [LUNet](https://github.com/aim-lab/LUNet) and software package [PVBM](https://github.com/aim-lab/PVBM). The publications associated with this model and package are below: 
+  - [LUNet: deep learning for the segmentation of arterioles and venules in high resolution fundus images](https://pubmed.ncbi.nlm.nih.gov/38599224/)
+  - [PVBM: A Python Vasculature Biomarker Toolbox Based on Retinal Blood Vessel Segmentation](https://link.springer.com/chapter/10.1007/978-3-031-25066-8_15).
+
 ---
 
 ## Getting started
@@ -70,6 +74,8 @@ To get a local copy up, follow the steps in `quick_start.txt`, or follow the ins
 ```
 git clone https://github.com/jaburke166/AutoMorphalyzer.git
 ```
+
+Alternatively, download the repository as a `.zip` file and extract it into a folder called `AutoMorphalyzer`.
 
 3. Create environment and install dependencies to create your own environment in Miniconda.
 
@@ -92,15 +98,21 @@ See below for how to run AutoMorphalyzer on your own data.
 
 ---
 
-## Contributors and citing
+## Contributors
 
 The contributors to this adapted codebase are:
 
 * Jamie Burke (Jamie.Burke@ed.ac.uk)
 
-The original author of this codebase is:
+The original author of the AutoMorph codebase is:
 
 * Yukun Zhou (yukun.zhou.19@ucl.ac.uk)
+
+The original author of the PVBM codebase is:
+
+* Jonathan Fhima (jonathanfh@campus.technion.ac.il)
+
+## Citing
 
 If you wish to use this toolkit please consider citing the original work using the following BibText, with additional comment on this being an adapted version.
 
@@ -117,3 +129,26 @@ If you wish to use this toolkit please consider citing the original work using t
 }
 ```
 
+Additionally, if you choose to use the PVBM model weights for segmentation (flagging `AutoMorph_models` as `0` in `config.txt`) then please consider citing the original work using the following BibText, with additional comment on this particular pipeline (AutoMorphalyzer) being used.
+
+```
+@inproceedings{fhima2022pvbm,
+  title={PVBM: a Python vasculature biomarker toolbox based on retinal blood vessel segmentation},
+  author={Fhima, Jonathan and Eijgen, Jan Van and Stalmans, Ingeborg and Men, Yevgeniy and Freiman, Moti and Behar, Joachim A},
+  booktitle={European Conference on Computer Vision},
+  pages={296--312},
+  year={2022},
+  organization={Springer}
+}
+
+@article{fhima2024lunet,
+  title={LUNet: deep learning for the segmentation of arterioles and venules in high resolution fundus images},
+  author={Fhima, Jonathan and Van Eijgen, Jan and Moulin-Roms{\'e}e, Marie-Isaline Billen and Brackenier, Helo{\"\i}se and Kulenovic, Hana and Debeuf, Val{\'e}rie and Vangilbergen, Marie and Freiman, Moti and Stalmans, Ingeborg and Behar, Joachim A},
+  journal={Physiological Measurement},
+  volume={45},
+  number={5},
+  pages={055002},
+  year={2024},
+  publisher={IOP Publishing}
+}
+```
