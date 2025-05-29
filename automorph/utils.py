@@ -26,6 +26,9 @@ from segment.artery_vein.model import Generator_main, Generator_branch
 from segment.optic_disc.models import get_model
 
 
+def hello_world():
+    print('Hellow World!')
+
 
 def _download_zipfile(url, filepath):
     
